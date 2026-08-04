@@ -1,10 +1,26 @@
+"use client";
+
+import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { MotionReveal } from "./motion-reveal";
 
 export function HeroSection() {
+  const reduceMotion = useReducedMotion();
+
+  const copyInitial = reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 };
+  const copyAnimate = { opacity: 1, y: 0 };
+  const mediaInitial = reduceMotion ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.985 };
+  const mediaAnimate = { opacity: 1, y: 0, scale: 1 };
+
   return (
     <MotionReveal as="header" className="hero" inView>
-      <div className="hero-copy">
+      <motion.div
+        className="hero-copy"
+        initial={copyInitial}
+        whileInView={copyAnimate}
+        viewport={{ once: true, amount: 0.35 }}
+        transition={{ duration: 0.32, ease: [0, 0, 0.2, 1], delay: 0.06 }}
+      >
         <p className="eyebrow">PC SPA • Premium Care</p>
         <h1>Fast fixes, clean builds, and smoother everyday computing.</h1>
         <p className="lead">
@@ -19,8 +35,14 @@ export function HeroSection() {
             Explore Services
           </a>
         </div>
-      </div>
-      <div className="hero-media">
+      </motion.div>
+      <motion.div
+        className="hero-media"
+        initial={mediaInitial}
+        whileInView={mediaAnimate}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.42, ease: [0, 0, 0.2, 1], delay: 0.12 }}
+      >
         <Image
           src="/pc-spa-hero.png"
           alt="Illustration of a modern PC workstation"
@@ -29,7 +51,7 @@ export function HeroSection() {
           priority
           sizes="(max-width: 900px) calc(100vw - 4rem), 50vw"
         />
-      </div>
+      </motion.div>
     </MotionReveal>
   );
 }
