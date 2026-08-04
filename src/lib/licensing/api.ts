@@ -4,6 +4,7 @@ import { licenseStates, type DeviceRecord, type LicenseActivationRecord, type Li
 import { hashValue } from "./crypto";
 import { ActivationLimitError, DuplicateActivationError, LicenseNotActiveError } from "./errors";
 import { hashSessionToken, signSessionToken, verifySessionToken, type SessionTokenClaims } from "./session-token";
+import { getSessionCookie } from "../auth/session";
 
 const activationSchema = z.object({
   activationKey: z.string().trim().min(8).max(100),
@@ -144,16 +145,19 @@ async function authenticate(request: Request, dependencies: LicensingApiDependen
 }
 
 async function authenticateAdmin(request: Request, dependencies: LicensingApiDependencies, now: Date): Promise<{ ok: true; claims: SessionTokenClaims } | { ok: false; code: string; message: string }> {
-  if (!dependencies.tokenSecret) return { ok: false, code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." };
-  const token = bearerToken(request);
-  if (!token) return { ok: false, code: "UNAUTHORIZED", message: "A bearer session token is required." };
-  const claims = await verifySessionToken(token, dependencies.tokenSecret, now);
-  if (!claims) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  const token = bearerToken(request) ?? getSessionCookie(request);
+  if (!token) return { ok: false, code: "UNAUTHORIZED", message: "A session token is required." };
+  const isBearer = bearerToken(request) !== null;
+  if (isBearer && !dependencies.tokenSecret) return { ok: false, code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." };
+  const claims = isBearer ? await verifySessionToken(token, dependencies.tokenSecret!, now) : null;
   const session = await dependencies.sessions.findByTokenHash(await hashSessionToken(token));
-  if (!session || session.revoked_at || session.expires_at <= now.toISOString() || session.user_id !== claims.uid) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
-  if (!dependencies.adminUserIds?.has(claims.uid)) return { ok: false, code: "FORBIDDEN", message: "Administrator access is required." };
+  if (!isBearer && !session) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  const authenticatedClaims = claims ?? (session ? { sid: session.id, uid: session.user_id, lid: "", did: "", iat: Math.floor(new Date(session.created_at).getTime() / 1000), exp: Math.floor(new Date(session.expires_at).getTime() / 1000) } : null);
+  if (!authenticatedClaims) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  if (!session || session.revoked_at || session.expires_at <= now.toISOString() || session.user_id !== authenticatedClaims.uid) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  if (!dependencies.adminUserIds?.has(authenticatedClaims.uid)) return { ok: false, code: "FORBIDDEN", message: "Administrator access is required." };
   await dependencies.sessions.touch(session.id, now.toISOString());
-  return { ok: true, claims };
+  return { ok: true, claims: authenticatedClaims };
 }
 
 export async function handleLicenseActivation(request: Request, dependencies: LicensingApiDependencies): Promise<Response> {

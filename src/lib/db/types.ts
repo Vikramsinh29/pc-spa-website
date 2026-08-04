@@ -72,6 +72,7 @@ export type LicenseState = (typeof licenseStates)[number];
 export type UserRecord = {
   id: string;
   email: string;
+  password_hash: string | null;
   display_name: string | null;
   created_at: string;
   updated_at: string;
@@ -117,7 +118,7 @@ export type SessionRecord = {
   last_seen_at: string | null;
 };
 
-export type NewUser = { id: string; email: string; displayName?: string | null };
+export type NewUser = { id: string; email: string; passwordHash?: string | null; displayName?: string | null };
 export type NewDevice = { id: string; userId: string; fingerprintHash: string; name?: string | null };
 export type NewSession = { id: string; userId: string; tokenHash: string; expiresAt: string };
 export type NewLicense = {

@@ -7,19 +7,19 @@ export class UserRepository {
 
   findById(id: string): Promise<UserRecord | null> {
     return withDatabaseError(() =>
-      this.database.prepare("SELECT id, email, display_name, created_at, updated_at FROM users WHERE id = ?1 LIMIT 1").bind(id).first<UserRecord>(),
+      this.database.prepare("SELECT id, email, password_hash, display_name, created_at, updated_at FROM users WHERE id = ?1 LIMIT 1").bind(id).first<UserRecord>(),
     );
   }
 
   findByEmail(email: string): Promise<UserRecord | null> {
     return withDatabaseError(() =>
-      this.database.prepare("SELECT id, email, display_name, created_at, updated_at FROM users WHERE email = ?1 LIMIT 1").bind(email).first<UserRecord>(),
+      this.database.prepare("SELECT id, email, password_hash, display_name, created_at, updated_at FROM users WHERE email = ?1 LIMIT 1").bind(email).first<UserRecord>(),
     );
   }
 
   async insert(input: NewUser): Promise<void> {
     await withDatabaseError(() =>
-      this.database.prepare("INSERT INTO users (id, email, display_name) VALUES (?1, ?2, ?3)").bind(input.id, input.email, input.displayName ?? null).run(),
+      this.database.prepare("INSERT INTO users (id, email, password_hash, display_name) VALUES (?1, ?2, ?3, ?4)").bind(input.id, input.email, input.passwordHash ?? null, input.displayName ?? null).run(),
     );
   }
 }
