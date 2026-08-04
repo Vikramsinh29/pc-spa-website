@@ -15,6 +15,10 @@
     box-sizing: border-box;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     margin: 0;
     font-family: Inter, "Segoe UI", Roboto, sans-serif;
@@ -121,6 +125,19 @@
     background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
   }
 
   .card h2 {
@@ -142,5 +159,22 @@
 
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button,
+  .card {
+    transition: none;
+  }
+
+  .button:hover,
+  .card:hover,
+  .card:focus-within {
+    transform: none;
   }
 }
