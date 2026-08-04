@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { BetaRequestForm } from "@/components/beta-request-form";
 
 export default function Home() {
   return (
@@ -21,11 +22,7 @@ export default function Home() {
             <p className="eyebrow">PC-SPA &middot; CONTROLLED BETA</p>
             <h1>A cleaner, clearer Windows PC.<br /><span>No guesswork.</span></h1>
             <p className="intro">Understand system health, safely review temporary files, and improve everyday performance with a calm, guided experience.</p>
-            <form className="signup" id="join">
-              <label className="sr-only" htmlFor="email">Email address</label>
-              <input id="email" type="email" placeholder="Your email address" required />
-              <button type="submit">Request beta access <span>&rarr;</span></button>
-            </form>
+            <BetaRequestForm />
             <div className="trust-row">
               <span>&#10003; Windows 10 &amp; 11</span>
               <span>&#9671; Review before cleaning</span>
