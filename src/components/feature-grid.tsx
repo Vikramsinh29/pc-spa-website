@@ -1,3 +1,5 @@
+import { MotionReveal } from "./motion-reveal";
+
 const features = [
   {
     title: "Performance tuning",
@@ -15,13 +17,13 @@ const features = [
 
 export function FeatureGrid() {
   return (
-    <section className="feature-grid" id="services">
+    <MotionReveal as="section" className="feature-grid" id="services" inView delay={0.1}>
       {features.map((feature) => (
         <article className="card" key={feature.title}>
           <h2>{feature.title}</h2>
           <p>{feature.description}</p>
         </article>
       ))}
-    </section>
+    </MotionReveal>
   );
 }

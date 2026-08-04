@@ -1,8 +1,9 @@
 import Image from "next/image";
+import { MotionReveal } from "./motion-reveal";
 
 export function HeroSection() {
   return (
-    <header className="hero">
+    <MotionReveal as="header" className="hero" inView>
       <div className="hero-copy">
         <p className="eyebrow">PC SPA • Premium Care</p>
         <h1>Fast fixes, clean builds, and smoother everyday computing.</h1>
@@ -29,6 +30,6 @@ export function HeroSection() {
           sizes="(max-width: 900px) calc(100vw - 4rem), 50vw"
         />
       </div>
-    </header>
+    </MotionReveal>
   );
 }
