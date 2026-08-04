@@ -22,10 +22,12 @@ export async function POST(request: Request): Promise<Response> {
     repository: repositories.betaAccessRequests,
     rateLimiter: bindings.BETA_REQUEST_LIMITER,
     approvedOrigin: serverEnvironment.siteUrl.origin,
+    allowedOrigins: serverEnvironment.allowedOrigins,
     logger: (entry) => console.info(JSON.stringify(entry)),
   });
 }
 
 export async function OPTIONS(request: Request): Promise<Response> {
-  return createOptionsResponse(request, getServerEnvironment().siteUrl.origin);
+  const environment = getServerEnvironment();
+  return createOptionsResponse(request, environment.siteUrl.origin, environment.allowedOrigins);
 }

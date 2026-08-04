@@ -31,6 +31,7 @@ function makeDependencies(): { dependencies: AuthApiDependencies; users: Map<str
     },
     rateLimiter: { limit: vi.fn(async () => ({ success: true })) },
     approvedOrigin: origin,
+    allowedOrigins: new Set([origin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]),
     secureCookies: true,
     createId: () => `id-${++sequence}`,
     createRequestId: () => "request-1",
@@ -109,5 +110,15 @@ describe("authentication API", () => {
     dependencies.rateLimiter = { limit: vi.fn(async () => ({ success: false })) };
     const response = await handleLogin(request("login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "person@example.com", password: "wrong password" }) }), dependencies);
     expect(response.status).toBe(429);
+  });
+
+  it("allows the worker test origin and rejects unknown origins while accepting missing Origin", async () => {
+    const { dependencies } = makeDependencies();
+    const allowed = await handleLogin(request("login", { method: "POST", headers: { origin: "https://pc-spa-web.pc-spa-feedback.workers.dev", "content-type": "application/json" }, body: JSON.stringify({ email: "person@example.com", password: "wrong password" }) }), { ...dependencies, allowedOrigins: new Set([origin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]) });
+    expect(allowed.status).not.toBe(403);
+    const rejected = await handleLogin(request("login", { method: "POST", headers: { origin: "https://evil.example", "content-type": "application/json" }, body: JSON.stringify({ email: "person@example.com", password: "wrong password" }) }), { ...dependencies, allowedOrigins: new Set([origin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]) });
+    expect(rejected.status).toBe(403);
+    const sameOrigin = await handleLogin(new Request(`${origin}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "person@example.com", password: "wrong password" }) }), { ...dependencies, allowedOrigins: new Set([origin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]) });
+    expect(sameOrigin.status).toBe(401);
   });
 });

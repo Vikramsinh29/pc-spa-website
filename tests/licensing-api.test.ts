@@ -53,6 +53,7 @@ function createDependencies(overrides: Partial<LicensingApiDependencies> = {}): 
     },
     rateLimiter: { limit: vi.fn(async () => ({ success: true })) },
     approvedOrigin: origin,
+    allowedOrigins: new Set([origin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]),
     tokenSecret: secret,
     createId: () => `id-${++id}`,
     createRequestId: () => "request-1",
@@ -124,6 +125,14 @@ describe("licensing API", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ data: { status: "valid", license: { id: "license-1", state: "active" } } });
     expect(JSON.stringify(body)).not.toContain("activation_key_hash");
+  });
+
+  it("enforces the shared origin allowlist for worker and unknown origins", async () => {
+    const dependencies = createDependencies();
+    const allowedResponse = await handleLicenseValidation(new Request("https://getpcspa.com/api/licenses/validate", { method: "POST", headers: { origin: "https://pc-spa-web.pc-spa-feedback.workers.dev", authorization: "Bearer invalid" }, body: "{}" }), dependencies);
+    expect(allowedResponse.status).not.toBe(403);
+    const rejectedResponse = await handleLicenseValidation(new Request("https://getpcspa.com/api/licenses/validate", { method: "POST", headers: { origin: "https://evil.example", authorization: "Bearer invalid" }, body: "{}" }), dependencies);
+    expect(rejectedResponse.status).toBe(403);
   });
 
   it("rejects expired and tampered session tokens", async () => {

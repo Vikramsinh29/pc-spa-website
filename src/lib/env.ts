@@ -4,6 +4,7 @@ type CloudflareEnvironment = (typeof allowedEnvironments)[number];
 
 export type ServerEnvironment = {
   siteUrl: URL;
+  allowedOrigins: ReadonlySet<string>;
   cloudflareEnv: CloudflareEnvironment;
   d1DatabaseName: string;
   adminUserIds: ReadonlySet<string>;
@@ -14,6 +15,22 @@ export class EnvironmentValidationError extends Error {
     super(message);
     this.name = "EnvironmentValidationError";
   }
+}
+
+function parseAllowedOrigins(siteUrl: URL): ReadonlySet<string> {
+  const configuredAllowedOrigins = process.env.ALLOWED_ORIGINS;
+  const values = (configuredAllowedOrigins ?? siteUrl.origin)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (values.length === 0) {
+    throw new EnvironmentValidationError("ALLOWED_ORIGINS must contain at least one origin.");
+  }
+
+  const allowedOrigins = new Set(values);
+  allowedOrigins.add(siteUrl.origin);
+  return allowedOrigins;
 }
 
 export function getServerEnvironment(): ServerEnvironment {
@@ -47,6 +64,7 @@ export function getServerEnvironment(): ServerEnvironment {
 
   return {
     siteUrl,
+    allowedOrigins: parseAllowedOrigins(siteUrl),
     cloudflareEnv: cloudflareEnv as CloudflareEnvironment,
     d1DatabaseName,
     adminUserIds: new Set(

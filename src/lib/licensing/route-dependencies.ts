@@ -25,6 +25,7 @@ export async function getLicensingApiDependencies(): Promise<LicensingApiDepende
     tokenSecret: bindings.LICENSE_TOKEN_SECRET,
     adminUserIds: new Set((bindings.ADMIN_USER_IDS ?? "").split(",").map((value) => value.trim()).filter(Boolean)),
     approvedOrigin: getServerEnvironment().siteUrl.origin,
+    allowedOrigins: getServerEnvironment().allowedOrigins,
     logger: (entry) => console.info(JSON.stringify(entry)),
   };
 }

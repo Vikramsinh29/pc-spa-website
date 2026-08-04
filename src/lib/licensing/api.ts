@@ -48,6 +48,7 @@ export type LicensingApiDependencies = {
   sessions: SessionRepositoryLike;
   rateLimiter: { limit(options: { key: string }): Promise<{ success: boolean }> } | undefined;
   approvedOrigin: string;
+  allowedOrigins: ReadonlySet<string>;
   tokenSecret: string | undefined;
   adminUserIds?: ReadonlySet<string>;
   createId?: () => string;
@@ -63,10 +64,11 @@ type AuthenticatedSession = {
   activation: LicenseActivationRecord;
 };
 
-function headers(origin: string | null, approvedOrigin: string): HeadersInit {
+function responseHeaders(origin: string | null, allowedOrigins: ReadonlySet<string>): HeadersInit {
   const result: Record<string, string> = { "Cache-Control": "no-store", Vary: "Origin" };
-  if (origin === approvedOrigin) {
-    result["Access-Control-Allow-Origin"] = approvedOrigin;
+  if (origin && allowedOrigins.has(origin)) {
+    result["Access-Control-Allow-Origin"] = origin;
+    result["Access-Control-Allow-Credentials"] = "true";
     result["Access-Control-Allow-Methods"] = "POST, OPTIONS";
     result["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
     result["Access-Control-Max-Age"] = "600";
@@ -74,8 +76,8 @@ function headers(origin: string | null, approvedOrigin: string): HeadersInit {
   return result;
 }
 
-function response(body: unknown, status: number, requestId: string, origin: string | null, approvedOrigin: string): Response {
-  return Response.json(body, { status, headers: { ...headers(origin, approvedOrigin), "X-Request-Id": requestId } });
+function response(body: unknown, status: number, requestId: string, origin: string | null, dependencies: LicensingApiDependencies): Response {
+  return Response.json(body, { status, headers: { ...responseHeaders(origin, dependencies.allowedOrigins), "X-Request-Id": requestId } });
 }
 
 function log(dependencies: LicensingApiDependencies, requestId: string, event: string, outcome: string): void {
@@ -91,11 +93,11 @@ async function parse<T>(request: Request, schema: z.ZodType<T>, requestId: strin
   try {
     body = await request.json();
   } catch {
-    return response({ error: { code: "INVALID_JSON", message: "Request body must be valid JSON." } }, 400, requestId, origin, dependencies.approvedOrigin);
+    return response({ error: { code: "INVALID_JSON", message: "Request body must be valid JSON." } }, 400, requestId, origin, dependencies);
   }
   const result = schema.safeParse(body);
   if (!result.success) {
-    return response({ error: { code: "VALIDATION_ERROR", message: "Request body is invalid.", fields: result.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) } }, 400, requestId, origin, dependencies.approvedOrigin);
+    return response({ error: { code: "VALIDATION_ERROR", message: "Request body is invalid.", fields: result.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message })) } }, 400, requestId, origin, dependencies);
   }
   return result.data;
 }
@@ -112,18 +114,18 @@ function clientKey(request: Request, route: string): string {
 }
 
 async function guard(request: Request, route: string, dependencies: LicensingApiDependencies, requestId: string, origin: string | null): Promise<Response | null> {
-  if (origin && origin !== dependencies.approvedOrigin) {
+  if (origin && !dependencies.allowedOrigins.has(origin)) {
     log(dependencies, requestId, route, "origin_rejected");
-    return response({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, 403, requestId, origin, dependencies.approvedOrigin);
+    return response({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, 403, requestId, origin, dependencies);
   }
-  if (!dependencies.rateLimiter) return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies.approvedOrigin);
+  if (!dependencies.rateLimiter) return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies);
   try {
     if (!(await dependencies.rateLimiter.limit({ key: clientKey(request, route) })).success) {
       log(dependencies, requestId, route, "rate_limited");
-      return response({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } }, 429, requestId, origin, dependencies.approvedOrigin);
+      return response({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } }, 429, requestId, origin, dependencies);
     }
   } catch {
-    return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies.approvedOrigin);
+    return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies);
   }
   return null;
 }
@@ -167,16 +169,16 @@ export async function handleLicenseActivation(request: Request, dependencies: Li
   if (blocked) return blocked;
   const input = await parse(request, activationSchema, requestId, origin, dependencies);
   if (input instanceof Response) return input;
-  if (!dependencies.tokenSecret) return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies.approvedOrigin);
+  if (!dependencies.tokenSecret) return response({ error: { code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." } }, 503, requestId, origin, dependencies);
 
   const now = dependencies.now?.() ?? new Date();
   const license = await dependencies.licenses.findByActivationKeyHash(await hashValue(input.activationKey), now);
-  if (!license) return response({ error: { code: "INVALID_ACTIVATION_KEY", message: "Activation key is invalid." } }, 401, requestId, origin, dependencies.approvedOrigin);
-  if (license.state !== "active") return response({ error: { code: `LICENSE_${license.state.toUpperCase()}`, message: "License is not available for activation." } }, 403, requestId, origin, dependencies.approvedOrigin);
+  if (!license) return response({ error: { code: "INVALID_ACTIVATION_KEY", message: "Activation key is invalid." } }, 401, requestId, origin, dependencies);
+  if (license.state !== "active") return response({ error: { code: `LICENSE_${license.state.toUpperCase()}`, message: "License is not available for activation." } }, 403, requestId, origin, dependencies);
 
   const fingerprintHash = await hashValue(input.deviceId);
   let device = await dependencies.devices.findByFingerprintHash(fingerprintHash);
-  if (device && device.user_id !== license.user_id) return response({ error: { code: "DEVICE_NOT_ALLOWED", message: "Device is not registered to this license owner." } }, 403, requestId, origin, dependencies.approvedOrigin);
+  if (device && device.user_id !== license.user_id) return response({ error: { code: "DEVICE_NOT_ALLOWED", message: "Device is not registered to this license owner." } }, 403, requestId, origin, dependencies);
   if (!device) {
     const candidate = { id: id(dependencies), userId: license.user_id, fingerprintHash, name: input.deviceMetadata?.name ?? null };
     try {
@@ -184,10 +186,10 @@ export async function handleLicenseActivation(request: Request, dependencies: Li
       device = await dependencies.devices.findByFingerprintHash(fingerprintHash);
     } catch (error) {
       if (error instanceof DatabaseError && error.code === "constraint") device = await dependencies.devices.findByFingerprintHash(fingerprintHash);
-      else return response({ error: { code: "DATABASE_ERROR", message: "License could not be activated." } }, 503, requestId, origin, dependencies.approvedOrigin);
+      else return response({ error: { code: "DATABASE_ERROR", message: "License could not be activated." } }, 503, requestId, origin, dependencies);
     }
   }
-  if (!device) return response({ error: { code: "DATABASE_ERROR", message: "Device could not be registered." } }, 503, requestId, origin, dependencies.approvedOrigin);
+  if (!device) return response({ error: { code: "DATABASE_ERROR", message: "Device could not be registered." } }, 503, requestId, origin, dependencies);
 
   try {
     const activation = await dependencies.licenses.activate(license.id, device.id, id(dependencies), now);
@@ -196,12 +198,12 @@ export async function handleLicenseActivation(request: Request, dependencies: Li
     const sessionToken = await signSessionToken(claims, dependencies.tokenSecret);
     await dependencies.sessions.insert({ id: claims.sid, userId: claims.uid, tokenHash: await hashSessionToken(sessionToken), expiresAt: expiresAt.toISOString() });
     log(dependencies, requestId, "license_activate", "created");
-    return response({ data: { status: "activated", sessionToken, expiresAt: expiresAt.toISOString(), license: { id: license.id, state: license.state, expiresAt: license.expires_at }, device: { id: device.id }, activation: { id: activation.id } } }, 201, requestId, origin, dependencies.approvedOrigin);
+    return response({ data: { status: "activated", sessionToken, expiresAt: expiresAt.toISOString(), license: { id: license.id, state: license.state, expiresAt: license.expires_at }, device: { id: device.id }, activation: { id: activation.id } } }, 201, requestId, origin, dependencies);
   } catch (error) {
-    if (error instanceof ActivationLimitError) return response({ error: { code: "ACTIVATION_LIMIT_REACHED", message: "License activation limit has been reached." } }, 409, requestId, origin, dependencies.approvedOrigin);
-    if (error instanceof DuplicateActivationError) return response({ error: { code: "ALREADY_ACTIVATED", message: "This device is already activated." } }, 409, requestId, origin, dependencies.approvedOrigin);
-    if (error instanceof LicenseNotActiveError) return response({ error: { code: "LICENSE_NOT_ACTIVE", message: "License is not active." } }, 403, requestId, origin, dependencies.approvedOrigin);
-    return response({ error: { code: "DATABASE_ERROR", message: "License could not be activated." } }, 503, requestId, origin, dependencies.approvedOrigin);
+    if (error instanceof ActivationLimitError) return response({ error: { code: "ACTIVATION_LIMIT_REACHED", message: "License activation limit has been reached." } }, 409, requestId, origin, dependencies);
+    if (error instanceof DuplicateActivationError) return response({ error: { code: "ALREADY_ACTIVATED", message: "This device is already activated." } }, 409, requestId, origin, dependencies);
+    if (error instanceof LicenseNotActiveError) return response({ error: { code: "LICENSE_NOT_ACTIVE", message: "License is not active." } }, 403, requestId, origin, dependencies);
+    return response({ error: { code: "DATABASE_ERROR", message: "License could not be activated." } }, 503, requestId, origin, dependencies);
   }
 }
 
@@ -211,9 +213,9 @@ export async function handleLicenseValidation(request: Request, dependencies: Li
   const blocked = await guard(request, "validate", dependencies, requestId, origin);
   if (blocked) return blocked;
   const authenticated = await authenticate(request, dependencies, dependencies.now?.() ?? new Date());
-  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : 401, requestId, origin, dependencies.approvedOrigin);
+  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : 401, requestId, origin, dependencies);
   const { license, activation, session } = authenticated.value;
-  return response({ data: { status: "valid", session: { id: session.id, expiresAt: session.expires_at }, license: { id: license.id, state: license.state, expiresAt: license.expires_at }, activation: { id: activation.id, deviceId: activation.device_id, activatedAt: activation.activated_at } } }, 200, requestId, origin, dependencies.approvedOrigin);
+  return response({ data: { status: "valid", session: { id: session.id, expiresAt: session.expires_at }, license: { id: license.id, state: license.state, expiresAt: license.expires_at }, activation: { id: activation.id, deviceId: activation.device_id, activatedAt: activation.activated_at } } }, 200, requestId, origin, dependencies);
 }
 
 export async function handleLicenseDeactivation(request: Request, dependencies: LicensingApiDependencies): Promise<Response> {
@@ -223,11 +225,11 @@ export async function handleLicenseDeactivation(request: Request, dependencies: 
   if (blocked) return blocked;
   const now = dependencies.now?.() ?? new Date();
   const authenticated = await authenticate(request, dependencies, now);
-  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : 401, requestId, origin, dependencies.approvedOrigin);
+  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : 401, requestId, origin, dependencies);
   await dependencies.licenses.deactivate(authenticated.value.activation.id, now.toISOString());
   await dependencies.sessions.revoke(authenticated.value.session.id, now.toISOString());
   log(dependencies, requestId, "license_deactivate", "completed");
-  return response({ data: { status: "deactivated" } }, 200, requestId, origin, dependencies.approvedOrigin);
+  return response({ data: { status: "deactivated" } }, 200, requestId, origin, dependencies);
 }
 
 export async function handleAdminLicenseIssue(request: Request, dependencies: LicensingApiDependencies): Promise<Response> {
@@ -237,22 +239,26 @@ export async function handleAdminLicenseIssue(request: Request, dependencies: Li
   if (blocked) return blocked;
   const now = dependencies.now?.() ?? new Date();
   const authenticated = await authenticateAdmin(request, dependencies, now);
-  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : authenticated.code === "FORBIDDEN" ? 403 : 401, requestId, origin, dependencies.approvedOrigin);
+  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : authenticated.code === "FORBIDDEN" ? 403 : 401, requestId, origin, dependencies);
   const parsed = await parse(request, adminIssueSchema, requestId, origin, dependencies);
   if (parsed instanceof Response) return parsed;
 
   try {
     const created = await dependencies.licenses.create({ id: id(dependencies), userId: parsed.userId, activationLimit: parsed.activationLimit, expiresAt: parsed.expiresAt ?? null, state: parsed.state });
     log(dependencies, requestId, "admin_license_issue", "created");
-    return response({ data: { status: "created", license: created.license, activationKey: created.activationKey } }, 201, requestId, origin, dependencies.approvedOrigin);
+    return response({ data: { status: "created", license: created.license, activationKey: created.activationKey } }, 201, requestId, origin, dependencies);
   } catch {
     log(dependencies, requestId, "admin_license_issue", "persistence_error");
-    return response({ error: { code: "DATABASE_ERROR", message: "License could not be issued." } }, 503, requestId, origin, dependencies.approvedOrigin);
+    return response({ error: { code: "DATABASE_ERROR", message: "License could not be issued." } }, 503, requestId, origin, dependencies);
   }
 }
 
-export function createLicenseOptionsResponse(request: Request, approvedOrigin: string): Response {
+export function createLicenseOptionsResponse(
+  request: Request,
+  approvedOrigin: string,
+  allowedOrigins: ReadonlySet<string> = new Set([approvedOrigin]),
+): Response {
   const origin = request.headers.get("origin");
-  if (origin && origin !== approvedOrigin) return Response.json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, { status: 403 });
-  return new Response(null, { status: 204, headers: headers(origin, approvedOrigin) });
+  if (origin && !allowedOrigins.has(origin)) return Response.json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, { status: 403 });
+  return new Response(null, { status: 204, headers: responseHeaders(origin, allowedOrigins) });
 }

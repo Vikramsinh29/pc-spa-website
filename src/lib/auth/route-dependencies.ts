@@ -17,6 +17,7 @@ export async function getAuthApiDependencies(): Promise<AuthApiDependencies> {
     sessions: repositories.sessions,
     rateLimiter: bindings.BETA_REQUEST_LIMITER,
     approvedOrigin: environment.siteUrl.origin,
+    allowedOrigins: environment.allowedOrigins,
     secureCookies: environment.siteUrl.protocol === "https:",
     logger: (entry) => console.info(JSON.stringify(entry)),
   };

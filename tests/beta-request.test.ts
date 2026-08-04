@@ -34,6 +34,7 @@ function makeDependencies(overrides: Partial<HandlerDependencies> = {}): TestDep
       limit: vi.fn().mockResolvedValue({ success: true }) as TestDependencies["rateLimiter"]["limit"],
     },
     approvedOrigin,
+    allowedOrigins: new Set([approvedOrigin, "https://pc-spa-web.pc-spa-feedback.workers.dev"]),
     createId: () => "request-id",
     createRequestId: () => "trace-id",
     logger: vi.fn(),
@@ -130,5 +131,17 @@ describe("POST /api/beta/request", () => {
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ data: { status: "received", duplicate: true } });
+  });
+
+  it("allows the worker origin, rejects unknown origins, and accepts missing Origin", async () => {
+    const dependencies = makeDependencies();
+    const workerResponse = await handleBetaRequest(makeRequest({ email: "person@example.com" }, { origin: "https://pc-spa-web.pc-spa-feedback.workers.dev" }), dependencies);
+    expect(workerResponse.status).not.toBe(403);
+
+    const rejected = await handleBetaRequest(makeRequest({ email: "person@example.com" }, { origin: "https://evil.example" }), dependencies);
+    expect(rejected.status).toBe(403);
+
+    const noOrigin = await handleBetaRequest(makeRequest({ email: "person@example.com" }), dependencies);
+    expect(noOrigin.status).toBe(201);
   });
 });

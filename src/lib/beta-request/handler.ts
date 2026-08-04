@@ -27,19 +27,21 @@ export type BetaRequestDependencies = {
   repository: BetaAccessRequestRepositoryLike;
   rateLimiter: BetaRateLimiter | undefined;
   approvedOrigin: string;
+  allowedOrigins: ReadonlySet<string>;
   createId?: () => string;
   createRequestId?: () => string;
   logger?: (entry: Record<string, string>) => void;
 };
 
-function responseHeaders(origin: string | null, approvedOrigin: string): HeadersInit {
+function responseHeaders(origin: string | null, allowedOrigins: ReadonlySet<string>): HeadersInit {
   const headers: Record<string, string> = {
     "Cache-Control": "no-store",
     Vary: "Origin",
   };
 
-  if (origin === approvedOrigin) {
-    headers["Access-Control-Allow-Origin"] = approvedOrigin;
+  if (origin && allowedOrigins.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
     headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
     headers["Access-Control-Allow-Headers"] = "Content-Type";
     headers["Access-Control-Max-Age"] = "600";
@@ -52,12 +54,12 @@ function jsonResponse(
   body: unknown,
   status: number,
   origin: string | null,
-  approvedOrigin: string,
+  allowedOrigins: ReadonlySet<string>,
   requestId: string,
 ): Response {
   return Response.json(body, {
     status,
-    headers: { ...responseHeaders(origin, approvedOrigin), "X-Request-Id": requestId },
+    headers: { ...responseHeaders(origin, allowedOrigins), "X-Request-Id": requestId },
   });
 }
 
@@ -122,13 +124,13 @@ export async function handleBetaRequest(
   const requestId = dependencies.createRequestId?.() ?? crypto.randomUUID();
   const origin = request.headers.get("origin");
 
-  if (origin && origin !== dependencies.approvedOrigin) {
+  if (origin && !dependencies.allowedOrigins.has(origin)) {
     log(dependencies.logger, requestId, "origin_rejected");
     return jsonResponse(
       { error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } },
       403,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
@@ -139,7 +141,7 @@ export async function handleBetaRequest(
       { error: { code: "SERVICE_UNAVAILABLE", message: "Request service is unavailable." } },
       503,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
@@ -153,7 +155,7 @@ export async function handleBetaRequest(
       { error: { code: "SERVICE_UNAVAILABLE", message: "Request service is unavailable." } },
       503,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
@@ -163,14 +165,14 @@ export async function handleBetaRequest(
       { error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } },
       429,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
 
   const parsed = await parseInput(request);
   if (!parsed.success) {
-    for (const [name, value] of Object.entries(responseHeaders(origin, dependencies.approvedOrigin))) {
+    for (const [name, value] of Object.entries(responseHeaders(origin, dependencies.allowedOrigins))) {
       parsed.response.headers.set(name, value);
     }
     parsed.response.headers.set("X-Request-Id", requestId);
@@ -186,7 +188,7 @@ export async function handleBetaRequest(
       { data: { status: "received", duplicate: true } },
       200,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
@@ -207,7 +209,7 @@ export async function handleBetaRequest(
         { data: { status: "received", duplicate: true } },
         200,
         origin,
-        dependencies.approvedOrigin,
+        dependencies.allowedOrigins,
         requestId,
       );
     }
@@ -217,7 +219,7 @@ export async function handleBetaRequest(
       { error: { code: "DATABASE_ERROR", message: "Request could not be saved." } },
       503,
       origin,
-      dependencies.approvedOrigin,
+      dependencies.allowedOrigins,
       requestId,
     );
   }
@@ -227,7 +229,7 @@ export async function handleBetaRequest(
     { data: { status: "received", duplicate: false } },
     201,
     origin,
-    dependencies.approvedOrigin,
+    dependencies.allowedOrigins,
     requestId,
   );
 }
@@ -235,17 +237,18 @@ export async function handleBetaRequest(
 export function createOptionsResponse(
   request: Request,
   approvedOrigin: string,
+  allowedOrigins: ReadonlySet<string> = new Set([approvedOrigin]),
 ): Response {
   const origin = request.headers.get("origin");
-  if (origin && origin !== approvedOrigin) {
+  if (origin && !allowedOrigins.has(origin)) {
     return jsonResponse(
       { error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } },
       403,
       origin,
-      approvedOrigin,
+      allowedOrigins,
       crypto.randomUUID(),
     );
   }
 
-  return new Response(null, { status: 204, headers: responseHeaders(origin, approvedOrigin) });
+  return new Response(null, { status: 204, headers: responseHeaders(origin, allowedOrigins) });
 }

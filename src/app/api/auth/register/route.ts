@@ -9,5 +9,6 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function OPTIONS(request: Request): Promise<Response> {
-  return createAuthOptionsResponse(request, getServerEnvironment().siteUrl.origin);
+  const environment = getServerEnvironment();
+  return createAuthOptionsResponse(request, environment.siteUrl.origin, environment.allowedOrigins);
 }

@@ -9,6 +9,7 @@ binding = "ASSETS"
 
 [vars]
 SITE_URL = "https://getpcspa.com"
+ALLOWED_ORIGINS = "https://getpcspa.com,https://pc-spa-web.pc-spa-feedback.workers.dev"
 CLOUDFLARE_ENV = "production"
 D1_DATABASE_NAME = "pc-spa"
 
@@ -46,6 +47,7 @@ binding = "ASSETS"
 
 [env.production.vars]
 SITE_URL = "https://getpcspa.com"
+ALLOWED_ORIGINS = "https://getpcspa.com,https://pc-spa-web.pc-spa-feedback.workers.dev"
 CLOUDFLARE_ENV = "production"
 D1_DATABASE_NAME = "pc-spa"
 

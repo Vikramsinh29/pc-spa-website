@@ -30,6 +30,7 @@ export type AuthApiDependencies = {
   sessions: SessionRepositoryLike;
   rateLimiter: { limit(options: { key: string }): Promise<{ success: boolean }> } | undefined;
   approvedOrigin: string;
+  allowedOrigins: ReadonlySet<string>;
   secureCookies: boolean;
   createId?: () => string;
   createRequestId?: () => string;
@@ -37,10 +38,10 @@ export type AuthApiDependencies = {
   logger?: (entry: Record<string, string>) => void;
 };
 
-function responseHeaders(origin: string | null, approvedOrigin: string): Record<string, string> {
+function responseHeaders(origin: string | null, allowedOrigins: ReadonlySet<string>): Record<string, string> {
   const result: Record<string, string> = { "Cache-Control": "no-store", Vary: "Origin" };
-  if (origin === approvedOrigin) {
-    result["Access-Control-Allow-Origin"] = approvedOrigin;
+  if (origin && allowedOrigins.has(origin)) {
+    result["Access-Control-Allow-Origin"] = origin;
     result["Access-Control-Allow-Credentials"] = "true";
     result["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
     result["Access-Control-Allow-Headers"] = "Content-Type";
@@ -49,8 +50,12 @@ function responseHeaders(origin: string | null, approvedOrigin: string): Record<
   return result;
 }
 
+function rejectOrigin(origin: string | null, allowedOrigins: ReadonlySet<string>): boolean {
+  return origin !== null && !allowedOrigins.has(origin);
+}
+
 function json(body: unknown, status: number, requestId: string, origin: string | null, dependencies: AuthApiDependencies, cookie?: string): Response {
-  const headers: Record<string, string> = { ...responseHeaders(origin, dependencies.approvedOrigin), "X-Request-Id": requestId };
+  const headers: Record<string, string> = { ...responseHeaders(origin, dependencies.allowedOrigins), "X-Request-Id": requestId };
   if (cookie) headers["Set-Cookie"] = cookie;
   return Response.json(body, { status, headers });
 }
@@ -68,7 +73,7 @@ function clientKey(request: Request, route: string): string {
 }
 
 async function guard(request: Request, route: string, dependencies: AuthApiDependencies, requestId: string, origin: string | null): Promise<Response | null> {
-  if (origin && origin !== dependencies.approvedOrigin) return json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, 403, requestId, origin, dependencies);
+  if (rejectOrigin(origin, dependencies.allowedOrigins)) return json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, 403, requestId, origin, dependencies);
   if (!dependencies.rateLimiter) return json({ error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service is unavailable." } }, 503, requestId, origin, dependencies);
   try {
     if (!(await dependencies.rateLimiter.limit({ key: clientKey(request, route) })).success) {
@@ -175,10 +180,14 @@ export async function handleSession(request: Request, dependencies: AuthApiDepen
   return json({ data: { user: publicUser(current.user), expiresAt: current.session.expires_at } }, 200, requestId, origin, dependencies);
 }
 
-export function createAuthOptionsResponse(request: Request, approvedOrigin: string): Response {
+export function createAuthOptionsResponse(
+  request: Request,
+  approvedOrigin: string,
+  allowedOrigins: ReadonlySet<string> = new Set([approvedOrigin]),
+): Response {
   const origin = request.headers.get("origin");
-  if (origin && origin !== approvedOrigin) return Response.json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, { status: 403 });
-  const result = responseHeaders(origin, approvedOrigin);
+  if (origin && !allowedOrigins.has(origin)) return Response.json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed." } }, { status: 403 });
+  const result = responseHeaders(origin, allowedOrigins);
   return new Response(null, { status: 204, headers: result });
 }
 
