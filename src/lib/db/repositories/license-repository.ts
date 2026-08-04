@@ -42,7 +42,7 @@ export class LicenseRepository {
     return { license: publicLicense, activationKey };
   }
 
-  findById(id: string): Promise<LicenseRecord | null> {
+  private findRawById(id: string): Promise<LicenseRecord | null> {
     return withDatabaseError(() =>
       this.database
         .prepare("SELECT id, user_id, activation_key_hash, state, activation_limit, expires_at, created_at, updated_at FROM licenses WHERE id = ?1 LIMIT 1")
@@ -51,13 +51,41 @@ export class LicenseRepository {
     );
   }
 
-  findByActivationKeyHash(activationKeyHash: string): Promise<LicenseRecord | null> {
-    return withDatabaseError(() =>
+  private async applyExpiration(license: LicenseRecord, now: string): Promise<LicenseRecord> {
+    if (
+      license.expires_at === null ||
+      license.expires_at > now ||
+      (license.state !== "pending" && license.state !== "active")
+    ) {
+      return license;
+    }
+
+    await withDatabaseError(() =>
+      this.database
+        .prepare(
+          "UPDATE licenses SET state = 'expired', updated_at = ?2 WHERE id = ?1 AND state IN ('pending', 'active') AND expires_at IS NOT NULL AND expires_at <= ?2",
+        )
+        .bind(license.id, now)
+        .run(),
+    );
+
+    return (await this.findRawById(license.id)) ?? license;
+  }
+
+  async findById(id: string, now = new Date()): Promise<LicenseRecord | null> {
+    const license = await this.findRawById(id);
+    return license ? this.applyExpiration(license, now.toISOString()) : null;
+  }
+
+  async findByActivationKeyHash(activationKeyHash: string, now = new Date()): Promise<LicenseRecord | null> {
+    const license = await withDatabaseError(() =>
       this.database
         .prepare("SELECT id, user_id, activation_key_hash, state, activation_limit, expires_at, created_at, updated_at FROM licenses WHERE activation_key_hash = ?1 LIMIT 1")
         .bind(activationKeyHash)
         .first<LicenseRecord>(),
     );
+
+    return license ? this.applyExpiration(license, now.toISOString()) : null;
   }
 
   async transitionState(id: string, state: LicenseState): Promise<void> {
@@ -79,29 +107,56 @@ export class LicenseRepository {
     );
   }
 
-  async activate(licenseId: string, deviceId: string, activationId: string): Promise<LicenseActivationRecord> {
-    const license = await this.findById(licenseId);
+  async activate(licenseId: string, deviceId: string, activationId: string, now = new Date()): Promise<LicenseActivationRecord> {
+    const nowIso = now.toISOString();
+    const license = await this.findById(licenseId, now);
     if (!license || license.state !== "active") {
       throw new LicenseNotActiveError("License is not active.");
     }
 
-    const existing = await withDatabaseError(() =>
-      this.database.prepare("SELECT id FROM license_activations WHERE license_id = ?1 AND device_id = ?2 AND deactivated_at IS NULL LIMIT 1").bind(licenseId, deviceId).first<{ id: string }>(),
-    );
-    assertActivationIsUnique(existing?.id ?? null);
-
-    const activeCount = await withDatabaseError(async () => {
-      const result = await this.database.prepare("SELECT COUNT(*) AS count FROM license_activations WHERE license_id = ?1 AND deactivated_at IS NULL").bind(licenseId).first<{ count: number }>();
-      return Number(result?.count ?? 0);
-    });
-    assertActivationCapacity(activeCount, license.activation_limit);
-
-    await withDatabaseError(() =>
+    const result = await withDatabaseError(() =>
       this.database
-        .prepare("INSERT INTO license_activations (id, license_id, device_id) VALUES (?1, ?2, ?3)")
-        .bind(activationId, licenseId, deviceId)
+        .prepare(
+          `INSERT INTO license_activations (id, license_id, device_id)
+           SELECT ?1, id, ?2
+           FROM licenses
+           WHERE id = ?3
+             AND state = 'active'
+             AND (expires_at IS NULL OR expires_at > ?4)
+             AND (SELECT COUNT(*) FROM license_activations WHERE license_id = ?3 AND deactivated_at IS NULL) < activation_limit
+             AND NOT EXISTS (
+               SELECT 1 FROM license_activations
+               WHERE license_id = ?3 AND device_id = ?2 AND deactivated_at IS NULL
+             )`,
+        )
+        .bind(activationId, deviceId, licenseId, nowIso)
         .run(),
     );
+
+    if (result.meta.changes === 0) {
+      const currentLicense = await this.findById(licenseId, now);
+      if (!currentLicense || currentLicense.state !== "active") {
+        throw new LicenseNotActiveError("License is not active.");
+      }
+
+      const existing = await withDatabaseError(() =>
+        this.database
+          .prepare("SELECT id FROM license_activations WHERE license_id = ?1 AND device_id = ?2 AND deactivated_at IS NULL LIMIT 1")
+          .bind(licenseId, deviceId)
+          .first<{ id: string }>(),
+      );
+      assertActivationIsUnique(existing?.id ?? null);
+
+      const activeCount = await withDatabaseError(async () => {
+        const count = await this.database
+          .prepare("SELECT COUNT(*) AS count FROM license_activations WHERE license_id = ?1 AND deactivated_at IS NULL")
+          .bind(licenseId)
+          .first<{ count: number }>();
+        return Number(count?.count ?? 0);
+      });
+      assertActivationCapacity(activeCount, currentLicense.activation_limit);
+      throw new Error("Activation could not be created.");
+    }
 
     const activation = await withDatabaseError(() =>
       this.database.prepare("SELECT id, license_id, device_id, activated_at, deactivated_at FROM license_activations WHERE id = ?1 LIMIT 1").bind(activationId).first<LicenseActivationRecord>(),
