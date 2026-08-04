@@ -1,0 +1,28 @@
+name = "pc-spa-web"
+main = ".open-next/worker.js"
+compatibility_date = "2026-08-04"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Non-secret runtime configuration. Secrets belong in Cloudflare's dashboard
+# or `wrangler secret put`, never in this file.
+[vars]
+SITE_URL = "https://getpcspa.com"
+CLOUDFLARE_ENV = "production"
+D1_DATABASE_NAME = "pcspa"
+
+# Replace database_id after creating the D1 database with:
+# wrangler d1 create pcspa
+[[d1_databases]]
+binding = "DB"
+database_name = "pcspa"
+database_id = "replace-with-d1-database-id"
+migrations_dir = "migrations"
+
+# Required by OpenNext for its self-referencing Worker service binding.
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "pc-spa-web"

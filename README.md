@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PC SPA Web
 
-## Getting Started
+Next.js 16 App Router site deployed to Cloudflare Workers with the OpenNext adapter. Cloudflare Pages can use the same Wrangler-managed project and domain; the Worker target is required for server-rendered routes and `/api/health`.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
+copy .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The health endpoint is available at [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Cloudflare setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Authenticate Wrangler with `npx wrangler login`.
+2. Create the D1 database:
 
-## Learn More
+   ```bash
+   npx wrangler d1 create pcspa
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Replace `replace-with-d1-database-id` in `wrangler.toml` with the returned database ID.
+4. Configure the Cloudflare Pages/Workers project name as `pc-spa-web` and attach the production domain `getpcspa.com`.
+5. Set `SITE_URL`, `CLOUDFLARE_ENV`, and `D1_DATABASE_NAME` as non-secret variables in the deployment environment when overriding the checked-in defaults. Store future secrets with `wrangler secret put` or the Cloudflare dashboard.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Preview and deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Build the Next.js app for Cloudflare and preview it with Wrangler:
 
-## Deploy on Vercel
+```bash
+npm run cloudflare:build
+npm run cloudflare:dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Deploy the Worker and its static assets:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run cloudflare:build
+npm run cloudflare:deploy
+```
+
+The D1 binding is reserved as `DB`. No migrations are included in Sprint 1; add versioned SQL files under `migrations/` before introducing database-backed features.
