@@ -30,4 +30,17 @@ export class BetaAccessRequestRepository {
         .run(),
     );
   }
+
+  listAll(): Promise<BetaAccessRequestRecord[]> {
+    return withDatabaseError(() =>
+      this.database
+        .prepare(
+          `SELECT id, email, source, metadata_json, created_at
+           FROM beta_access_requests
+           ORDER BY created_at DESC`,
+        )
+        .all<BetaAccessRequestRecord>()
+        .then((result) => result.results),
+    );
+  }
 }

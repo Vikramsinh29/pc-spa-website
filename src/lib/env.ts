@@ -6,6 +6,7 @@ export type ServerEnvironment = {
   siteUrl: URL;
   cloudflareEnv: CloudflareEnvironment;
   d1DatabaseName: string;
+  adminUserIds: ReadonlySet<string>;
 };
 
 export class EnvironmentValidationError extends Error {
@@ -48,5 +49,11 @@ export function getServerEnvironment(): ServerEnvironment {
     siteUrl,
     cloudflareEnv: cloudflareEnv as CloudflareEnvironment,
     d1DatabaseName,
+    adminUserIds: new Set(
+      (process.env.ADMIN_USER_IDS ?? "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
   };
 }

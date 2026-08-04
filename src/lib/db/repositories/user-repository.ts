@@ -22,4 +22,13 @@ export class UserRepository {
       this.database.prepare("INSERT INTO users (id, email, password_hash, display_name) VALUES (?1, ?2, ?3, ?4)").bind(input.id, input.email, input.passwordHash ?? null, input.displayName ?? null).run(),
     );
   }
+
+  listAll(): Promise<UserRecord[]> {
+    return withDatabaseError(() =>
+      this.database
+        .prepare("SELECT id, email, password_hash, display_name, created_at, updated_at FROM users ORDER BY created_at DESC")
+        .all<UserRecord>()
+        .then((result) => result.results),
+    );
+  }
 }

@@ -128,3 +128,15 @@ export type NewLicense = {
   expiresAt?: string | null;
   state?: LicenseState;
 };
+
+export type LicenseSummaryRecord = {
+  id: string;
+  user_id: string;
+  email: string;
+  state: LicenseState;
+  activation_limit: number;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  active_device_count: number;
+};

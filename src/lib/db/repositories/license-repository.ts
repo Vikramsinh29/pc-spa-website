@@ -4,6 +4,7 @@ import type {
   LicenseActivationRecord,
   LicensePublicRecord,
   LicenseRecord,
+  LicenseSummaryRecord,
   LicenseState,
   NewLicense,
 } from "../types";
@@ -183,6 +184,42 @@ export class LicenseRepository {
         .prepare("UPDATE license_activations SET deactivated_at = ?2 WHERE id = ?1 AND deactivated_at IS NULL")
         .bind(activationId, deactivatedAt)
         .run(),
+    );
+  }
+
+  listByUserId(userId: string): Promise<LicenseSummaryRecord[]> {
+    return withDatabaseError(() =>
+      this.database
+        .prepare(
+          `SELECT l.id, l.user_id, u.email, l.state, l.activation_limit, l.expires_at, l.created_at, l.updated_at,
+                  COUNT(CASE WHEN la.deactivated_at IS NULL THEN 1 END) AS active_device_count
+           FROM licenses l
+           INNER JOIN users u ON u.id = l.user_id
+           LEFT JOIN license_activations la ON la.license_id = l.id
+           WHERE l.user_id = ?1
+           GROUP BY l.id, l.user_id, u.email, l.state, l.activation_limit, l.expires_at, l.created_at, l.updated_at
+           ORDER BY l.created_at DESC`,
+        )
+        .bind(userId)
+        .all<LicenseSummaryRecord>()
+        .then((result) => result.results.map((record) => ({ ...record, active_device_count: Number(record.active_device_count) }))),
+    );
+  }
+
+  listAll(): Promise<LicenseSummaryRecord[]> {
+    return withDatabaseError(() =>
+      this.database
+        .prepare(
+          `SELECT l.id, l.user_id, u.email, l.state, l.activation_limit, l.expires_at, l.created_at, l.updated_at,
+                  COUNT(CASE WHEN la.deactivated_at IS NULL THEN 1 END) AS active_device_count
+           FROM licenses l
+           INNER JOIN users u ON u.id = l.user_id
+           LEFT JOIN license_activations la ON la.license_id = l.id
+           GROUP BY l.id, l.user_id, u.email, l.state, l.activation_limit, l.expires_at, l.created_at, l.updated_at
+           ORDER BY l.created_at DESC`,
+        )
+        .all<LicenseSummaryRecord>()
+        .then((result) => result.results.map((record) => ({ ...record, active_device_count: Number(record.active_device_count) }))),
     );
   }
 }
