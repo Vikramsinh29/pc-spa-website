@@ -65,3 +65,64 @@ export type NewBetaAccessRequest = {
   source?: string | null;
   metadataJson?: string | null;
 };
+
+export const licenseStates = ["pending", "active", "expired", "revoked"] as const;
+export type LicenseState = (typeof licenseStates)[number];
+
+export type UserRecord = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LicenseRecord = {
+  id: string;
+  user_id: string;
+  activation_key_hash: string;
+  state: LicenseState;
+  activation_limit: number;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LicensePublicRecord = Omit<LicenseRecord, "activation_key_hash">;
+
+export type LicenseActivationRecord = {
+  id: string;
+  license_id: string;
+  device_id: string;
+  activated_at: string;
+  deactivated_at: string | null;
+};
+
+export type DeviceRecord = {
+  id: string;
+  user_id: string;
+  fingerprint_hash: string;
+  name: string | null;
+  last_seen_at: string | null;
+  created_at: string;
+};
+
+export type SessionRecord = {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: string;
+  revoked_at: string | null;
+  created_at: string;
+  last_seen_at: string | null;
+};
+
+export type NewUser = { id: string; email: string; displayName?: string | null };
+export type NewDevice = { id: string; userId: string; fingerprintHash: string; name?: string | null };
+export type NewSession = { id: string; userId: string; tokenHash: string; expiresAt: string };
+export type NewLicense = {
+  id: string;
+  userId: string;
+  activationLimit?: number;
+  expiresAt?: string | null;
+};
