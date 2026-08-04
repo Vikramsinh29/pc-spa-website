@@ -31,6 +31,8 @@ Open [http://localhost:3000](http://localhost:3000). The health endpoint is avai
 
    Use a randomly generated value of at least 32 characters. Never commit this secret or log activation keys, session tokens, email addresses, or device fingerprints.
 
+   Configure `ADMIN_USER_IDS` as a comma-separated non-secret variable containing the user IDs permitted to issue licenses through `/api/admin/licenses/issue`.
+
 ## Preview and deploy
 
 Build the Next.js app for Cloudflare and preview it with Wrangler:

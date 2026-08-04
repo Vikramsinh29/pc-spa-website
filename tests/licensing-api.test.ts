@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DeviceRecord, LicenseActivationRecord, LicenseRecord, SessionRecord } from "../src/lib/db/types";
 import { ActivationLimitError } from "../src/lib/licensing/errors";
-import { handleLicenseActivation, handleLicenseDeactivation, handleLicenseValidation, type LicensingApiDependencies } from "../src/lib/licensing/api";
+import { handleAdminLicenseIssue, handleLicenseActivation, handleLicenseDeactivation, handleLicenseValidation, type LicensingApiDependencies } from "../src/lib/licensing/api";
 import { signSessionToken } from "../src/lib/licensing/session-token";
 
 const origin = "https://getpcspa.com";
@@ -25,6 +25,13 @@ function createDependencies(overrides: Partial<LicensingApiDependencies> = {}): 
   const sessions = new Map<string, SessionRecord>();
   const dependencies: LicensingApiDependencies = {
     licenses: {
+      create: vi.fn(async (input) => ({
+        license: {
+          id: input.id, user_id: input.userId, state: input.state ?? "pending", activation_limit: input.activationLimit ?? 1,
+          expires_at: input.expiresAt ?? null, created_at: now.toISOString(), updated_at: now.toISOString(),
+        },
+        activationKey: "PCSPA-issued-key-once",
+      })),
       findByActivationKeyHash: vi.fn(async () => currentLicense.state === "active" || currentLicense.state === "pending" || currentLicense.state === "expired" || currentLicense.state === "revoked" ? currentLicense : null),
       findById: vi.fn(async () => currentLicense),
       activate: vi.fn(async (licenseId: string, deviceId: string, activationId: string) => {
@@ -147,5 +154,40 @@ describe("licensing API", () => {
     const result = await activate(dependencies);
     expect(result.response.status).toBe(429);
     expect(result.body).toMatchObject({ error: { code: "RATE_LIMITED" } });
+  });
+
+  it("issues a license for an authenticated admin and returns the key once", async () => {
+    const dependencies = createDependencies({ adminUserIds: new Set(["user-1"]) });
+    const activated = await activate(dependencies);
+    const token = (activated.body.data as Record<string, string>).sessionToken;
+    const response = await handleAdminLicenseIssue(request("admin/licenses/issue", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ userId: "user-2", activationLimit: 3, expiresAt: "2027-01-01T00:00:00.000Z", state: "active" }),
+    }), dependencies);
+    const body = await response.json() as Record<string, unknown>;
+    expect(response.status).toBe(201);
+    expect(body).toMatchObject({ data: { status: "created", activationKey: "PCSPA-issued-key-once", license: { user_id: "user-2", state: "active", activation_limit: 3 } } });
+    expect(dependencies.logger).not.toHaveBeenCalledWith(expect.objectContaining({ activationKey: "PCSPA-issued-key-once" }));
+  });
+
+  it("rejects unauthenticated and non-admin issuance", async () => {
+    const dependencies = createDependencies({ adminUserIds: new Set(["other-user"]) });
+    const unauthenticated = await handleAdminLicenseIssue(request("admin/licenses/issue", { method: "POST", body: JSON.stringify({ userId: "user-2" }) }), dependencies);
+    expect(unauthenticated.status).toBe(401);
+
+    const activated = await activate(dependencies);
+    const token = (activated.body.data as Record<string, string>).sessionToken;
+    const forbidden = await handleAdminLicenseIssue(request("admin/licenses/issue", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ userId: "user-2" }) }), dependencies);
+    expect(forbidden.status).toBe(403);
+  });
+
+  it("validates admin issuance input", async () => {
+    const dependencies = createDependencies({ adminUserIds: new Set(["user-1"]) });
+    const activated = await activate(dependencies);
+    const token = (activated.body.data as Record<string, string>).sessionToken;
+    const response = await handleAdminLicenseIssue(request("admin/licenses/issue", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ userId: "", activationLimit: 0, state: "unknown" }) }), dependencies);
+    expect(response.status).toBe(400);
+    expect((await response.json() as Record<string, unknown>)).toMatchObject({ error: { code: "VALIDATION_ERROR" } });
   });
 });

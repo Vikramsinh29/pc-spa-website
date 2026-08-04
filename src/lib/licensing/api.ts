@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DatabaseError } from "../db/errors";
-import type { DeviceRecord, LicenseActivationRecord, LicenseRecord, SessionRecord } from "../db/types";
+import { licenseStates, type DeviceRecord, type LicenseActivationRecord, type LicenseRecord, type SessionRecord } from "../db/types";
 import { hashValue } from "./crypto";
 import { ActivationLimitError, DuplicateActivationError, LicenseNotActiveError } from "./errors";
 import { hashSessionToken, signSessionToken, verifySessionToken, type SessionTokenClaims } from "./session-token";
@@ -11,9 +11,17 @@ const activationSchema = z.object({
   deviceMetadata: z.object({ name: z.string().trim().min(1).max(100).optional() }).strict().optional(),
 });
 
+const adminIssueSchema = z.object({
+  userId: z.string().trim().min(1).max(128),
+  activationLimit: z.number().int().min(1).max(100).default(1),
+  expiresAt: z.string().refine((value) => !Number.isNaN(Date.parse(value)), "expiresAt must be a valid ISO date.").nullable().optional(),
+  state: z.enum(licenseStates).default("pending"),
+});
+
 const sessionTtlSeconds = 15 * 60;
 
 type LicenseRepositoryLike = {
+  create(input: { id: string; userId: string; activationLimit?: number; expiresAt?: string | null; state?: LicenseRecord["state"] }): Promise<{ license: Omit<LicenseRecord, "activation_key_hash">; activationKey: string }>;
   findByActivationKeyHash(hash: string, now?: Date): Promise<LicenseRecord | null>;
   findById(id: string, now?: Date): Promise<LicenseRecord | null>;
   activate(licenseId: string, deviceId: string, activationId: string, now?: Date): Promise<LicenseActivationRecord>;
@@ -40,6 +48,7 @@ export type LicensingApiDependencies = {
   rateLimiter: { limit(options: { key: string }): Promise<{ success: boolean }> } | undefined;
   approvedOrigin: string;
   tokenSecret: string | undefined;
+  adminUserIds?: ReadonlySet<string>;
   createId?: () => string;
   createRequestId?: () => string;
   now?: () => Date;
@@ -134,6 +143,19 @@ async function authenticate(request: Request, dependencies: LicensingApiDependen
   return { ok: true, value: { claims, session, license, activation } };
 }
 
+async function authenticateAdmin(request: Request, dependencies: LicensingApiDependencies, now: Date): Promise<{ ok: true; claims: SessionTokenClaims } | { ok: false; code: string; message: string }> {
+  if (!dependencies.tokenSecret) return { ok: false, code: "SERVICE_UNAVAILABLE", message: "License service is unavailable." };
+  const token = bearerToken(request);
+  if (!token) return { ok: false, code: "UNAUTHORIZED", message: "A bearer session token is required." };
+  const claims = await verifySessionToken(token, dependencies.tokenSecret, now);
+  if (!claims) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  const session = await dependencies.sessions.findByTokenHash(await hashSessionToken(token));
+  if (!session || session.revoked_at || session.expires_at <= now.toISOString() || session.user_id !== claims.uid) return { ok: false, code: "UNAUTHORIZED", message: "Session token is invalid or expired." };
+  if (!dependencies.adminUserIds?.has(claims.uid)) return { ok: false, code: "FORBIDDEN", message: "Administrator access is required." };
+  await dependencies.sessions.touch(session.id, now.toISOString());
+  return { ok: true, claims };
+}
+
 export async function handleLicenseActivation(request: Request, dependencies: LicensingApiDependencies): Promise<Response> {
   const requestId = dependencies.createRequestId?.() ?? crypto.randomUUID();
   const origin = request.headers.get("origin");
@@ -202,6 +224,27 @@ export async function handleLicenseDeactivation(request: Request, dependencies: 
   await dependencies.sessions.revoke(authenticated.value.session.id, now.toISOString());
   log(dependencies, requestId, "license_deactivate", "completed");
   return response({ data: { status: "deactivated" } }, 200, requestId, origin, dependencies.approvedOrigin);
+}
+
+export async function handleAdminLicenseIssue(request: Request, dependencies: LicensingApiDependencies): Promise<Response> {
+  const requestId = dependencies.createRequestId?.() ?? crypto.randomUUID();
+  const origin = request.headers.get("origin");
+  const blocked = await guard(request, "admin-issue", dependencies, requestId, origin);
+  if (blocked) return blocked;
+  const now = dependencies.now?.() ?? new Date();
+  const authenticated = await authenticateAdmin(request, dependencies, now);
+  if (!authenticated.ok) return response({ error: { code: authenticated.code, message: authenticated.message } }, authenticated.code === "SERVICE_UNAVAILABLE" ? 503 : authenticated.code === "FORBIDDEN" ? 403 : 401, requestId, origin, dependencies.approvedOrigin);
+  const parsed = await parse(request, adminIssueSchema, requestId, origin, dependencies);
+  if (parsed instanceof Response) return parsed;
+
+  try {
+    const created = await dependencies.licenses.create({ id: id(dependencies), userId: parsed.userId, activationLimit: parsed.activationLimit, expiresAt: parsed.expiresAt ?? null, state: parsed.state });
+    log(dependencies, requestId, "admin_license_issue", "created");
+    return response({ data: { status: "created", license: created.license, activationKey: created.activationKey } }, 201, requestId, origin, dependencies.approvedOrigin);
+  } catch {
+    log(dependencies, requestId, "admin_license_issue", "persistence_error");
+    return response({ error: { code: "DATABASE_ERROR", message: "License could not be issued." } }, 503, requestId, origin, dependencies.approvedOrigin);
+  }
 }
 
 export function createLicenseOptionsResponse(request: Request, approvedOrigin: string): Response {

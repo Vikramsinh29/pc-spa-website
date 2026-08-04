@@ -25,10 +25,10 @@ export class LicenseRepository {
     await withDatabaseError(() =>
       this.database
         .prepare(
-          `INSERT INTO licenses (id, user_id, activation_key_hash, activation_limit, expires_at)
-           VALUES (?1, ?2, ?3, ?4, ?5)`,
+          `INSERT INTO licenses (id, user_id, activation_key_hash, state, activation_limit, expires_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
         )
-        .bind(input.id, input.userId, activationKeyHash, input.activationLimit ?? 1, input.expiresAt ?? null)
+        .bind(input.id, input.userId, activationKeyHash, input.state ?? "pending", input.activationLimit ?? 1, input.expiresAt ?? null)
         .run(),
     );
 

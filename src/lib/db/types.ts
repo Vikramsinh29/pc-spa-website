@@ -125,4 +125,5 @@ export type NewLicense = {
   userId: string;
   activationLimit?: number;
   expiresAt?: string | null;
+  state?: LicenseState;
 };

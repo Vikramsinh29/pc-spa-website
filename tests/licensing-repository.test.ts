@@ -97,8 +97,8 @@ class MemoryStatement {
         throw new Error("UNIQUE constraint failed: licenses.activation_key_hash");
       }
       this.database.licenses.set(String(this.values[0]), {
-        id: String(this.values[0]), user_id: String(this.values[1]), activation_key_hash: hash, state: "pending",
-        activation_limit: Number(this.values[3]), expires_at: (this.values[4] as string | null) ?? null, created_at: timestamp, updated_at: timestamp,
+        id: String(this.values[0]), user_id: String(this.values[1]), activation_key_hash: hash, state: (this.values[3] as LicenseRow["state"]) ?? "pending",
+        activation_limit: Number(this.values[4]), expires_at: (this.values[5] as string | null) ?? null, created_at: timestamp, updated_at: timestamp,
       });
       changes = 1;
     } else if (sql.startsWith("UPDATE licenses SET state = 'expired'")) {

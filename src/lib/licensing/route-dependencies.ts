@@ -8,6 +8,7 @@ import type { LicensingApiDependencies } from "./api";
 type LicensingEnvironment = CloudflareEnv & {
   BETA_REQUEST_LIMITER?: RateLimit;
   LICENSE_TOKEN_SECRET?: string;
+  ADMIN_USER_IDS?: string;
 };
 
 export async function getLicensingApiDependencies(): Promise<LicensingApiDependencies> {
@@ -22,6 +23,7 @@ export async function getLicensingApiDependencies(): Promise<LicensingApiDepende
     sessions: repositories.sessions,
     rateLimiter: bindings.BETA_REQUEST_LIMITER,
     tokenSecret: bindings.LICENSE_TOKEN_SECRET,
+    adminUserIds: new Set((bindings.ADMIN_USER_IDS ?? "").split(",").map((value) => value.trim()).filter(Boolean)),
     approvedOrigin: getServerEnvironment().siteUrl.origin,
     logger: (entry) => console.info(JSON.stringify(entry)),
   };
