@@ -17,7 +17,14 @@ const features = [
 
 export function FeatureGrid() {
   return (
-    <MotionReveal as="section" className="feature-grid" id="services" inView delay={0.1}>
+    <MotionReveal
+      as="section"
+      className="feature-grid"
+      id="services"
+      aria-label="Services"
+      inView
+      delay={0.1}
+    >
       {features.map((feature) => (
         <article className="card" key={feature.title}>
           <h2>{feature.title}</h2>

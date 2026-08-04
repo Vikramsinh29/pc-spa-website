@@ -7,6 +7,7 @@ type MotionRevealProps = {
   children: ReactNode;
   className?: string;
   id?: string;
+  "aria-label"?: string;
   as?: "div" | "header" | "section";
   delay?: number;
   inView?: boolean;
@@ -16,6 +17,7 @@ export function MotionReveal({
   children,
   className,
   id,
+  "aria-label": ariaLabel,
   as = "div",
   delay = 0,
   inView = false,
@@ -35,6 +37,7 @@ export function MotionReveal({
 
   const sharedProps = {
     id,
+    "aria-label": ariaLabel,
     className,
     initial: hidden,
     transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const, delay },
