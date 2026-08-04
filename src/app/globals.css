@@ -801,3 +801,32 @@ footer > * {
     transition: none !important;
   }
 }
+
+.portal-link-button {
+  text-decoration: none;
+}
+
+.portal-grid-issue {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: start;
+}
+
+.portal-select {
+  appearance: none;
+}
+
+.portal-key-block {
+  display: block;
+  margin-top: 1rem;
+  padding: 1rem 1.125rem;
+  overflow-wrap: anywhere;
+  border: 1px solid #cbbfae;
+  background: #fff;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.issue-success-panel {
+  border-color: #c69a51;
+  background: rgba(255, 250, 240, 0.92);
+}
