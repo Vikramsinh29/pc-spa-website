@@ -7,6 +7,9 @@
   --gold2: #e5b44f;
   --cream: #f6f1e7;
   --line: #d8cdb9;
+  --page-gutter: clamp(1.5rem, 7vw, 12rem);
+  --wide-gutter: clamp(1.5rem, 9vw, 12rem);
+  --section-space: clamp(5.25rem, 8.333vw, 7.5rem);
 }
 
 * {
@@ -50,8 +53,9 @@ input {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(min(440px, 44vw), 44%) minmax(0, 1fr);
+  width: 100%;
   min-height: 100svh;
+  grid-template-columns: minmax(440px, 44%) 1fr;
   padding: 0;
   overflow: hidden;
   background: radial-gradient(circle at 70% 40%, #fffaf0 0, #f8f3ea 44%, #efe7da 100%);
@@ -71,7 +75,7 @@ input {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
 }
 
@@ -84,18 +88,20 @@ input {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 32px;
+  min-width: 0;
+  gap: 2rem;
   height: 96px;
 }
 
 .nav nav {
   display: flex;
   align-items: center;
-  gap: 40px;
+  min-width: 0;
+  gap: 2.5rem;
 }
 
 .nav a {
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
 }
 
@@ -106,7 +112,7 @@ input {
 .nav nav a::after {
   position: absolute;
   right: 100%;
-  bottom: -7px;
+  bottom: -0.4375rem;
   left: 0;
   height: 1px;
   background: var(--gold);
@@ -119,7 +125,7 @@ input {
 }
 
 .nav-cta {
-  padding: 12px 18px;
+  padding: 0.75rem 1.125rem;
   border: 1px solid var(--gold);
   border-radius: 10px;
 }
@@ -130,14 +136,15 @@ input {
 }
 
 .hero-content {
+  min-width: 0;
   max-width: 750px;
   margin: clamp(28px, 6vh, 64px) auto 44px;
 }
 
 .eyebrow {
-  margin: 0 0 26px;
+  margin: 0 0 1.625rem;
   color: var(--gold);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 800;
   letter-spacing: 0.22em;
 }
@@ -146,7 +153,7 @@ input {
   display: block;
   width: 72px;
   height: 1px;
-  margin-top: 16px;
+  margin-top: 1rem;
   background: var(--gold);
   content: "";
 }
@@ -180,18 +187,18 @@ h1 span {
 .signup {
   display: flex;
   width: 100%;
-  min-height: 66px;
+  min-height: 4.125rem;
   overflow: hidden;
   border: 1px solid #bfb4a3;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   background: #ffffff7a;
-  box-shadow: 0 14px 40px #573f1912;
+  box-shadow: 0 0.875rem 2.5rem #573f1912;
 }
 
 .signup input {
   min-width: 0;
   flex: 1;
-  padding: 0 22px;
+  padding: 0 1.375rem;
   color: var(--ink);
   border: 0;
   outline: 0;
@@ -199,7 +206,7 @@ h1 span {
 }
 
 .signup button {
-  padding: 0 28px;
+  padding: 0 1.75rem;
   color: #fff;
   border: 0;
   background: linear-gradient(135deg, #d59a2c, #b97816);
@@ -210,67 +217,73 @@ h1 span {
 
 .signup button:hover {
   filter: brightness(1.07);
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
 }
 
 .signup button span {
-  margin-left: 10px;
+  margin-left: 0.625rem;
 }
 
 .trust-row {
   display: flex;
+  min-width: 0;
   gap: 26px;
   margin-top: 34px;
   color: #333b3e;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .trust-row span + span {
-  padding-left: 26px;
+  padding-left: 1.625rem;
   border-left: 1px solid #c7bcaa;
 }
 
 .beta-note {
+  min-width: 0;
   max-width: 620px;
   margin-top: 22px;
   color: #81796f;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
 .section {
-  max-width: 1440px;
+  min-width: 0;
+  max-width: 90rem;
   margin: auto;
-  padding: 120px 7vw;
+  padding: var(--section-space) var(--page-gutter);
 }
 
 .section-head {
   display: flex;
+  min-width: 0;
   align-items: end;
   justify-content: space-between;
-  gap: 40px;
-  margin-bottom: 64px;
+  gap: 2.5rem;
+  margin-bottom: 4rem;
 }
 
 .section h2,
 .safety h2 {
+  min-width: 0;
   margin: 0;
-  font-size: clamp(38px, 4.5vw, 64px);
+  font-size: clamp(2.375rem, 4.5vw, 4rem);
   line-height: 1.04;
   letter-spacing: -0.045em;
 }
 
 .feature-grid {
   display: grid;
+  min-width: 0;
   grid-template-columns: repeat(6, 1fr);
-  gap: 18px;
+  gap: 1.125rem;
 }
 
 .feature-grid article {
   grid-column: span 2;
   min-width: 0;
-  min-height: 255px;
-  padding: 32px;
+  min-height: 15.9375rem;
+  padding: 2rem;
   border: 1px solid var(--line);
   background: #ffffff73;
   transition: all 0.25s;
@@ -286,8 +299,8 @@ h1 span {
 
 .feature-grid article:hover {
   border-color: #c69a51;
-  box-shadow: 0 18px 50px #49321014;
-  transform: translateY(-5px);
+  box-shadow: 0 1.125rem 3.125rem #49321014;
+  transform: translateY(-0.3125rem);
 }
 
 .feature-grid article > span {
@@ -296,8 +309,8 @@ h1 span {
 }
 
 .feature-grid h3 {
-  margin: 64px 0 12px;
-  font-size: 23px;
+  margin: 4rem 0 0.75rem;
+  font-size: 1.4375rem;
 }
 
 .feature-grid p,
@@ -309,9 +322,10 @@ h1 span {
 
 .safety {
   display: grid;
+  min-width: 0;
   grid-template-columns: 1fr 1fr;
-  gap: 8vw;
-  padding: 120px 9vw;
+  gap: clamp(2rem, 8vw, 8rem);
+  padding: var(--section-space) var(--wide-gutter);
   color: #f8f3e9;
   background: #0b1012;
 }
@@ -321,7 +335,8 @@ h1 span {
 }
 
 .safety-card {
-  padding: 38px;
+  min-width: 0;
+  padding: 2.375rem;
   border: 1px solid #514124;
   border-radius: 0;
   background: linear-gradient(145deg, #12191b, #0a0e10);
@@ -334,19 +349,20 @@ h1 span {
 .shield {
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  margin-bottom: 25px;
+  width: 3.375rem;
+  height: 3.375rem;
+  margin-bottom: 1.5625rem;
   color: var(--gold2);
   border: 1px solid var(--gold2);
-  border-radius: 18px;
-  font-size: 22px;
+  border-radius: 1.125rem;
+  font-size: 1.375rem;
 }
 
 .faq {
   display: grid;
+  min-width: 0;
   grid-template-columns: 0.8fr 1.2fr;
-  gap: 8vw;
+  gap: clamp(2rem, 8vw, 8rem);
 }
 
 .faq .section-head {
@@ -354,7 +370,7 @@ h1 span {
 }
 
 .faq-list details {
-  padding: 22px 0;
+  padding: 1.375rem 0;
   border-top: 1px solid var(--line);
 }
 
@@ -364,12 +380,13 @@ h1 span {
 
 .faq-list summary {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 1.25rem;
   cursor: pointer;
   list-style: none;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
 }
 
@@ -387,24 +404,29 @@ h1 span {
 }
 
 .faq-list p {
-  margin: 16px 40px 0 0;
+  margin: 1rem 2.5rem 0 0;
 }
 
 footer {
   display: flex;
   flex-wrap: wrap;
+  min-width: 0;
   align-items: center;
-  gap: 30px;
-  padding: 34px 7vw;
+  gap: 1.875rem;
+  padding: 2.125rem var(--page-gutter);
   border-top: 1px solid var(--line);
   color: #716b63;
-  font-size: 13px;
+  font-size: 0.8125rem;
+}
+
+footer > * {
+  min-width: 0;
 }
 
 .footer-brand {
   margin-right: auto;
   color: var(--gold);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 900;
 }
 
@@ -435,21 +457,21 @@ footer {
   }
 
   .hero-copy {
-    padding: 0 24px 72px;
+    padding: 0 1.5rem 4.5rem;
   }
 
   .nav {
     justify-content: space-between;
-    gap: 14px;
-    height: 84px;
+    gap: 0.875rem;
+    height: 5.25rem;
   }
 
   .nav nav {
-    gap: 20px;
+    gap: 1.25rem;
   }
 
   .nav nav a {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .mobile-brand,
@@ -458,20 +480,20 @@ footer {
   }
 
   .hero-content {
-    margin: 32px auto 0;
+    margin: 2rem auto 0;
   }
 
   h1 {
-    font-size: clamp(43px, 11vw, 65px);
+    font-size: clamp(2.6875rem, 3.375rem, 4.0625rem);
   }
 
   .intro {
-    font-size: 17px;
+    font-size: 1.0625rem;
   }
 
   .trust-row {
     flex-wrap: wrap;
-    gap: 12px 18px;
+    gap: 0.75rem 1.125rem;
   }
 
   .trust-row span + span {
@@ -490,7 +512,7 @@ footer {
   }
 
   .feature-grid article {
-    min-height: 210px;
+    min-height: 13.125rem;
   }
 
   .safety,
@@ -500,7 +522,7 @@ footer {
 
   .section,
   .safety {
-    padding: 84px 24px;
+    padding: 5.25rem 1.5rem;
   }
 }
 
@@ -525,23 +547,23 @@ footer {
 
   .signup input {
     width: 100%;
-    height: 58px;
+    height: 3.625rem;
     border: 1px solid #bfb4a3;
-    border-radius: 10px;
+    border-radius: 0.625rem;
     background: #ffffff80;
   }
 
   .signup button {
     width: 100%;
-    height: 58px;
-    margin-top: 10px;
-    border-radius: 10px;
+    height: 3.625rem;
+    margin-top: 0.625rem;
+    border-radius: 0.625rem;
   }
 
   footer {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 0.5rem;
   }
 }
 
