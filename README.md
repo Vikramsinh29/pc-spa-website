@@ -23,7 +23,13 @@ Open [http://localhost:3000](http://localhost:3000). The health endpoint is avai
 
 3. Replace `replace-with-d1-database-id` in `wrangler.toml` with the returned database ID.
 4. Configure the Cloudflare Pages/Workers project name as `pc-spa-web` and attach the production domain `getpcspa.com`.
-5. Set `SITE_URL`, `CLOUDFLARE_ENV`, and `D1_DATABASE_NAME` as non-secret variables in the deployment environment when overriding the checked-in defaults. Store future secrets with `wrangler secret put` or the Cloudflare dashboard.
+5. Set `SITE_URL`, `CLOUDFLARE_ENV`, and `D1_DATABASE_NAME` as non-secret variables in the deployment environment when overriding the checked-in defaults. Set the licensing token secret with:
+
+   ```bash
+   npx wrangler secret put LICENSE_TOKEN_SECRET
+   ```
+
+   Use a randomly generated value of at least 32 characters. Never commit this secret or log activation keys, session tokens, email addresses, or device fingerprints.
 
 ## Preview and deploy
 

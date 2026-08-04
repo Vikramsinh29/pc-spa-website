@@ -167,4 +167,22 @@ export class LicenseRepository {
 
     return activation;
   }
+
+  findActiveActivation(licenseId: string, deviceId: string): Promise<LicenseActivationRecord | null> {
+    return withDatabaseError(() =>
+      this.database
+        .prepare("SELECT id, license_id, device_id, activated_at, deactivated_at FROM license_activations WHERE license_id = ?1 AND device_id = ?2 AND deactivated_at IS NULL LIMIT 1")
+        .bind(licenseId, deviceId)
+        .first<LicenseActivationRecord>(),
+    );
+  }
+
+  async deactivate(activationId: string, deactivatedAt: string): Promise<void> {
+    await withDatabaseError(() =>
+      this.database
+        .prepare("UPDATE license_activations SET deactivated_at = ?2 WHERE id = ?1 AND deactivated_at IS NULL")
+        .bind(activationId, deactivatedAt)
+        .run(),
+    );
+  }
 }

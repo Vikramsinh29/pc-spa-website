@@ -15,8 +15,10 @@ export function generateActivationKey(): string {
   return `PCSPA-${bytesToBase64Url(bytes)}`;
 }
 
-export async function hashActivationKey(key: string): Promise<string> {
-  const encoded = new TextEncoder().encode(key);
+export async function hashValue(value: string): Promise<string> {
+  const encoded = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", encoded);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
+
+export const hashActivationKey = hashValue;

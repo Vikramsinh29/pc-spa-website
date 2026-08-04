@@ -22,4 +22,10 @@ export class SessionRepository {
       this.database.prepare("UPDATE sessions SET revoked_at = ?2 WHERE id = ?1 AND revoked_at IS NULL").bind(id, revokedAt).run(),
     );
   }
+
+  async touch(id: string, lastSeenAt: string): Promise<void> {
+    await withDatabaseError(() =>
+      this.database.prepare("UPDATE sessions SET last_seen_at = ?2 WHERE id = ?1 AND revoked_at IS NULL").bind(id, lastSeenAt).run(),
+    );
+  }
 }
