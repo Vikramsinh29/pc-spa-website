@@ -24,6 +24,8 @@
     font-family: Inter, "Segoe UI", Roboto, sans-serif;
     background: radial-gradient(circle at top left, #12304f 0%, var(--bg) 45%, #030711 100%);
     color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   a {
@@ -64,6 +66,10 @@
     @apply mx-auto grid max-w-[1180px] items-center gap-8 border border-white/[0.12] bg-[color:var(--panel)] p-8 shadow-[0_25px_60px_rgba(0,0,0,0.35)];
     border-radius: 28px;
     overflow: hidden;
+  }
+
+  .hero > * {
+    min-width: 0;
   }
 
   .hero-copy h1 {
@@ -135,6 +141,7 @@
   .hero-media img {
     border-radius: 24px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+    height: auto;
   }
 
   .feature-grid {
@@ -203,5 +210,11 @@
   .card:hover,
   .card:focus-within {
     transform: none;
+  }
+}
+
+@supports not ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+  .card {
+    background: rgba(20, 31, 49, 0.92);
   }
 }
