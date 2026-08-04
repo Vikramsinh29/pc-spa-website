@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const siteTitle = "PC SPA";
 const siteDescription =
   "PC SPA offers streamlined support, performance tuning, and premium PC care.";
 const siteUrl = "https://getpcspa.com";
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -58,7 +63,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }

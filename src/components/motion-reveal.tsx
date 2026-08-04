@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { domAnimation, LazyMotion, m, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 
 type MotionRevealProps = {
@@ -42,12 +42,24 @@ export function MotionReveal({
   };
 
   if (as === "header") {
-    return <motion.header {...sharedProps}>{children}</motion.header>;
+    return (
+      <LazyMotion features={domAnimation}>
+        <m.header {...sharedProps}>{children}</m.header>
+      </LazyMotion>
+    );
   }
 
   if (as === "section") {
-    return <motion.section {...sharedProps}>{children}</motion.section>;
+    return (
+      <LazyMotion features={domAnimation}>
+        <m.section {...sharedProps}>{children}</m.section>
+      </LazyMotion>
+    );
   }
 
-  return <motion.div {...sharedProps}>{children}</motion.div>;
+  return (
+    <LazyMotion features={domAnimation}>
+      <m.div {...sharedProps}>{children}</m.div>
+    </LazyMotion>
+  );
 }
