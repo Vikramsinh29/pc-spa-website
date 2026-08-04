@@ -37,6 +37,14 @@ export type ServiceRequestRecord = {
   updated_at: string;
 };
 
+export type BetaAccessRequestRecord = {
+  id: string;
+  email: string;
+  source: string | null;
+  metadata_json: string | null;
+  created_at: string;
+};
+
 export type NewCustomer = {
   id: string;
   email: string;
@@ -49,4 +57,11 @@ export type NewServiceRequest = {
   customerId: string;
   serviceId: string;
   notes?: string | null;
+};
+
+export type NewBetaAccessRequest = {
+  id: string;
+  email: string;
+  source?: string | null;
+  metadataJson?: string | null;
 };

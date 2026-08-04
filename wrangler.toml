@@ -26,3 +26,11 @@ migrations_dir = "migrations"
 [[services]]
 binding = "WORKER_SELF_REFERENCE"
 service = "pc-spa-web"
+
+# Replace namespace_id with the ID provisioned for this Worker.
+[[ratelimits]]
+name = "BETA_REQUEST_LIMITER"
+namespace_id = "replace-with-rate-limit-namespace-id"
+[ratelimits.simple]
+limit = 5
+period = 60

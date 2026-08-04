@@ -9,6 +9,8 @@ export { createRepositories } from "./repositories";
 export { runTransaction } from "./transaction";
 export type {
   CustomerRecord,
+  BetaAccessRequestRecord,
+  NewBetaAccessRequest,
   NewCustomer,
   NewServiceRequest,
   ServiceRecord,
