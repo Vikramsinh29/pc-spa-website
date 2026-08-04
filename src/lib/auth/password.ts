@@ -1,5 +1,5 @@
 const algorithm = "PBKDF2-SHA256";
-const iterations = 120_000;
+const iterations = 100_000;
 const saltBytes = 16;
 const derivedBits = 256;
 

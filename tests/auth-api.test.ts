@@ -51,7 +51,7 @@ describe("authentication API", () => {
     const body = await response.json() as Record<string, unknown>;
     expect(response.status).toBe(201);
     expect(body).toMatchObject({ data: { user: { email: "person@example.com" } } });
-    expect(users.get("id-1")?.password_hash).toMatch(/^PBKDF2-SHA256\$/u);
+    expect(users.get("id-1")?.password_hash).toMatch(/^PBKDF2-SHA256\$100000\$/u);
     expect(JSON.stringify(body)).not.toContain("correct horse");
   });
 
