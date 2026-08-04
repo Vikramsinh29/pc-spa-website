@@ -1,15 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 
-const siteTitle = "PC SPA";
+const siteTitle = "PC-SPA — A cleaner, clearer Windows PC";
 const siteDescription =
-  "PC SPA offers streamlined support, performance tuning, and premium PC care.";
+  "Join the controlled PC-SPA beta and safely understand, clean, and improve your Windows PC.";
 const siteUrl = "https://getpcspa.com";
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -47,13 +42,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
-    apple: "/favicon.svg",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07111f",
-  colorScheme: "dark",
+  themeColor: "#f6f1e7",
 };
 
 export default function RootLayout({
@@ -63,10 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <a className="skip-link" href="#about">
-          Skip to content
-        </a>
+      <body className="antialiased">
         {children}
       </body>
     </html>
