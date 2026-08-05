@@ -462,6 +462,13 @@ footer > * {
   background: radial-gradient(circle at top right, #fff8ec 0, #f7f0e4 35%, #efe7da 100%);
 }
 
+.portal-shell-dashboard {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(129, 99, 255, 0.12) 0, transparent 32%),
+    radial-gradient(circle at 85% 10%, rgba(193, 149, 68, 0.14) 0, transparent 28%),
+    linear-gradient(180deg, #0d1320 0%, #111827 52%, #0b101a 100%);
+}
+
 .portal-card {
   width: min(42rem, 100%);
   margin: 0 auto;
@@ -469,6 +476,15 @@ footer > * {
   border: 1px solid var(--line);
   background: rgba(255, 252, 246, 0.92);
   box-shadow: 0 1.5rem 3.5rem rgba(73, 50, 16, 0.08);
+}
+
+.portal-card-dashboard {
+  width: min(86rem, 100%);
+  border-color: rgba(209, 193, 164, 0.16);
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(10, 15, 26, 0.94)),
+    #0c1220;
+  box-shadow: 0 2.5rem 6rem rgba(0, 0, 0, 0.34);
 }
 
 .portal-card-wide {
@@ -489,6 +505,16 @@ footer > * {
 .portal-success {
   color: var(--muted);
   line-height: 1.6;
+}
+
+.portal-card-dashboard .portal-copy,
+.portal-card-dashboard .portal-meta,
+.portal-card-dashboard .portal-section-heading p,
+.portal-card-dashboard .portal-inline-error,
+.portal-card-dashboard .portal-error,
+.portal-card-dashboard .portal-success,
+.portal-card-dashboard .portal-details dd {
+  color: rgba(234, 239, 247, 0.72);
 }
 
 .portal-copy {
@@ -532,8 +558,26 @@ footer > * {
   font-weight: 800;
 }
 
+.portal-button:focus-visible,
+.portal-table-button:focus-visible,
+.signup button:focus-visible,
+.signup input:focus-visible,
+.portal-input:focus-visible {
+  outline: 2px solid #d8b15f;
+  outline-offset: 2px;
+}
+
 .portal-button-secondary {
   background: #1e2428;
+}
+
+.portal-download-button {
+  background: linear-gradient(135deg, #8265ff, #5f3bd8);
+}
+
+.portal-copy-button {
+  min-height: 2.75rem;
+  background: linear-gradient(135deg, #6d5522, #8d6a23);
 }
 
 .portal-error {
@@ -560,6 +604,78 @@ footer > * {
   gap: 1.25rem;
 }
 
+.portal-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+}
+
+.portal-panel-hero {
+  min-height: 17rem;
+}
+
+.portal-panel-accent-gold {
+  border-color: rgba(212, 165, 70, 0.24);
+  background: linear-gradient(180deg, rgba(28, 34, 46, 0.95), rgba(15, 20, 31, 0.98));
+}
+
+.portal-panel-accent-purple {
+  border-color: rgba(125, 96, 255, 0.22);
+  background: linear-gradient(180deg, rgba(23, 28, 45, 0.95), rgba(12, 18, 31, 0.98));
+}
+
+.portal-panel-feedback,
+.portal-panel-table {
+  margin-top: 1.25rem;
+}
+
+.portal-panel-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.portal-panel-kicker {
+  margin-bottom: 0.35rem;
+  color: #d9b15c;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.portal-panel-head h2,
+.portal-section-heading h2 {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 1.4rem;
+}
+
+.portal-details-hero {
+  margin-top: 1.25rem;
+}
+
+.portal-details-hero dd {
+  font-size: 1rem;
+}
+
+.portal-section-heading-stack {
+  align-items: start;
+}
+
+.portal-feedback-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.portal-feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
 .portal-header-row {
   grid-template-columns: 1fr auto;
   align-items: start;
@@ -574,6 +690,36 @@ footer > * {
   padding: 1.5rem;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
+}
+
+.portal-card-dashboard .portal-panel {
+  border-color: rgba(225, 232, 242, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.portal-card-dashboard .portal-table th,
+.portal-card-dashboard .portal-table td {
+  border-top-color: rgba(225, 232, 242, 0.12);
+  color: rgba(234, 239, 247, 0.85);
+}
+
+.portal-card-dashboard .portal-table th {
+  color: rgba(234, 239, 247, 0.56);
+}
+
+.portal-card-dashboard .portal-badge-pending {
+  color: #e2b55d;
+}
+
+.portal-card-dashboard .portal-badge-active {
+  color: #77d49d;
+}
+
+.portal-card-dashboard .portal-badge-expired,
+.portal-card-dashboard .portal-badge-revoked {
+  color: #ef8b7a;
 }
 
 .portal-panel h2 {
@@ -755,7 +901,8 @@ footer > * {
   .safety,
   .faq,
   .portal-grid,
-  .portal-header-row {
+  .portal-header-row,
+  .portal-dashboard-grid {
     grid-template-columns: 1fr;
   }
 
@@ -763,6 +910,14 @@ footer > * {
   .safety,
   .portal-shell {
     padding: 5.25rem 1.5rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .portal-panel-head,
+  .portal-section-heading {
+    flex-direction: column;
+    align-items: start;
   }
 }
 

@@ -38,6 +38,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/components/auth/logout-button", () => ({ LogoutButton: () => null }));
 vi.mock("@/components/auth/license-state-button", () => ({ LicenseStateButton: () => null }));
 vi.mock("@/components/auth/license-issue-form", () => ({ LicenseIssueForm: () => null }));
+vi.mock("@/components/account/copy-email-button", () => ({ CopyEmailButton: () => null }));
 
 import { AuthForm } from "../src/components/auth/auth-form";
 import AccountPage from "../src/app/account/page";
